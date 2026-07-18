@@ -18,14 +18,21 @@
       display:flex;align-items:center;padding:0 16px;font-weight:700;color:var(--text-header);font-size:15px;gap:10px}
     .topbar-logo-img{height:28px;width:auto;flex-shrink:0;border-radius:4px}
     #main-layout{flex:1;display:flex;min-height:0}
-    #left-sidebar{width:240px;min-width:240px;background:var(--bg-dark);overflow-y:auto;padding:16px 8px}
+    #left-sidebar{width:288px;min-width:288px;background:var(--bg-dark);overflow-y:auto;padding:16px 8px}
     .sidebar-section-header{padding:0 8px 6px;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--text-muted)}
     .chapters-list{list-style:none;margin:0;padding:0}
     .chapter-item{display:flex;align-items:center;gap:6px;padding:6px 8px;margin:1px 0;border-radius:4px;
       color:var(--text-muted);font-size:15px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .chapter-item:hover{background:var(--bg-hover);color:var(--text-header)}
     .chapter-item.active{background:var(--bg-active);color:var(--text-header)}
+    .chapter-item.nested{padding-left:18px}
+    .chapter-item.hidden-by-collapse{display:none}
     .chapter-hash{color:var(--text-faint);font-weight:600}
+    .category-header{display:flex;align-items:center;gap:4px;padding:14px 6px 4px;font-size:12px;font-weight:700;
+      letter-spacing:.02em;text-transform:uppercase;color:var(--text-muted);cursor:pointer;user-select:none}
+    .category-header:hover{color:var(--text-header)}
+    .category-chevron{display:inline-block;transition:transform .1s ease;font-size:10px}
+    .category-header.collapsed .category-chevron{transform:rotate(-90deg)}
     #chat-area{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg-primary)}
     #channel-header{height:48px;min-height:48px;display:flex;align-items:center;gap:8px;padding:0 16px;
       border-bottom:1px solid var(--border-subtle);font-weight:700;color:var(--text-header)}
@@ -51,6 +58,7 @@
     .message-content pre.code-block{background:var(--bg-darkest);border:1px solid var(--border-soft);border-radius:4px;
       padding:10px 12px;margin:4px 0;overflow-x:auto}
     .message-content pre.code-block code{font-family:var(--font-code);font-size:.85em;white-space:pre}
+    .message-content .subtext{display:inline;font-size:12px;color:var(--text-faint)}
     .spoiler{background:var(--bg-elevated);color:transparent;border-radius:3px;cursor:pointer;padding:0 2px;user-select:none}
     .spoiler.revealed{background:var(--bg-hover);color:var(--text-normal);user-select:text}
     .illustration-block{display:flex;flex-direction:column;align-items:center;margin:24px 0;padding:12px 0}
@@ -64,7 +72,7 @@
       color:var(--text-normal);border:none;border-radius:4px;cursor:pointer}
     .reader-load-btn:hover{background:var(--bg-hover)}
     @media (max-width:860px){
-      #left-sidebar{position:absolute;z-index:20;height:calc(100vh - 48px);left:-240px;transition:left .15s ease}
+      #left-sidebar{position:absolute;z-index:20;height:calc(100vh - 48px);left:-288px;transition:left .15s ease;width:288px}
       #left-sidebar.mobile-open{left:0;box-shadow:4px 0 16px rgba(0,0,0,.4)}
     }
   </style>
@@ -94,20 +102,21 @@
 </div>
 <script>
 var CHAPTERS_INDEX = [];
-var CHARACTERS = [];
+var CHARACTERS_MAP = {};
 var episodeCache = {};
 var activeChapterId = null;
 var READER_BATCH_SIZE = 300;
 var visibleCount = READER_BATCH_SIZE;
 function escapeHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function initials(name){return name ? name.trim().charAt(0).toUpperCase() : '?';}
-function getCharacterById(id){for(var i=0;i<CHARACTERS.length;i++){if(CHARACTERS[i].id===id)return CHARACTERS[i];}return null;}
+function getCharacterById(id){return CHARACTERS_MAP[id] || null;}
 function avatarStyle(ch){if(ch&&ch.avatar)return "background-image:url('"+ch.avatar+"');";return 'background-color:'+((ch&&ch.color)||'#5865f2')+';';}
 function parseFormatting(raw){
   var text = escapeHtml(raw); var placeholders = [];
   function stash(html){ var token = '\u0000'+placeholders.length+'\u0000'; placeholders.push(html); return token; }
   text = text.replace(/```([\s\S]+?)```/g, function(m, code){ var cleaned = code.replace(/^[a-zA-Z0-9_-]*\n/, ''); return stash('<pre class="code-block"><code>'+cleaned+'</code></pre>'); });
   text = text.replace(/`([^`\n]+?)`/g, function(m, code){ return stash('<code class="inline-code">'+code+'</code>'); });
+  text = text.replace(/\\([\\*_~`|[\]()])/g, function(m, ch){ return stash(ch); });
   text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, function(m,label,url){ return '<a href="'+url+'" target="_blank" rel="noopener noreferrer">'+label+'</a>'; });
   text = text.replace(/\|\|([\s\S]+?)\|\|/g, function(m, inner){ return '<span class="spoiler" role="button" tabindex="0" title="Clique para revelar">'+inner+'</span>'; });
   text = text.replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>');
@@ -115,6 +124,7 @@ function parseFormatting(raw){
   text = text.replace(/~~([\s\S]+?)~~/g, '<s>$1</s>');
   text = text.replace(/\*([^\n*]+?)\*/g, '<em>$1</em>');
   text = text.replace(/\u0000(\d+)\u0000/g, function(m,i){ return placeholders[Number(i)]; });
+  text = text.replace(/-#([^\n]+?)-#/g, '<span class="subtext">$1</span>');
   text = text.replace(/\n/g, '<br>');
   return text;
 }
@@ -161,6 +171,7 @@ function showReaderChapter(id){
   var meta = null;
   for (var i=0;i<CHAPTERS_INDEX.length;i++){ if (CHAPTERS_INDEX[i].id===id){ meta = CHAPTERS_INDEX[i]; break; } }
   if (!meta) return;
+  if (activeChapterId && activeChapterId !== id) { delete episodeCache[activeChapterId]; }
   activeChapterId = id;
   visibleCount = READER_BATCH_SIZE;
   document.querySelectorAll('.chapter-item').forEach(function(el){ el.classList.toggle('active', el.dataset.chapter===id); });
@@ -177,6 +188,7 @@ function showReaderChapter(id){
   fetch('data/episodes/' + id + '.json')
     .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(function(data){
+      (data.characters || []).forEach(function(c){ CHARACTERS_MAP[c.id] = c; });
       episodeCache[id] = data.messages || [];
       if (activeChapterId !== id) return;
       document.getElementById('reader-messages').innerHTML = renderMessagesBatch(episodeCache[id], visibleCount);
@@ -186,11 +198,36 @@ function showReaderChapter(id){
       setStatus('Não foi possível carregar este episódio (' + err.message + '). Este arquivo precisa ser aberto via http(s) — ex: GitHub Pages — e não direto do disco (file://).');
     });
 }
+var CATEGORIES_INDEX = [];
+function getFirstChapterId(){
+  var uncategorized = CHAPTERS_INDEX.filter(function(c){ return !c.categoryId; });
+  if (uncategorized.length) return uncategorized[0].id;
+  for (var i=0;i<CATEGORIES_INDEX.length;i++){
+    var inCat = CHAPTERS_INDEX.filter(function(c){ return c.categoryId === CATEGORIES_INDEX[i].id; });
+    if (inCat.length) return inCat[0].id;
+  }
+  return CHAPTERS_INDEX.length ? CHAPTERS_INDEX[0].id : null;
+}
+function toggleReaderCategory(catId){
+  document.querySelectorAll('.chapter-item[data-category="'+catId+'"]').forEach(function(el){ el.classList.toggle('hidden-by-collapse'); });
+  var header = document.querySelector('.category-header[data-category="'+catId+'"]');
+  if (header) header.classList.toggle('collapsed');
+}
 function buildSidebar(){
   var ul = document.querySelector('.chapters-list');
   var html = '';
-  CHAPTERS_INDEX.forEach(function(c){
-    html += '<li class="chapter-item" data-chapter="'+c.id+'" onclick="showReaderChapter(\''+c.id+'\')"><span class="chapter-hash">#</span><span>'+escapeHtml(c.name)+'</span></li>';
+  var firstId = getFirstChapterId();
+  var uncategorized = CHAPTERS_INDEX.filter(function(c){ return !c.categoryId; });
+  uncategorized.forEach(function(c){
+    html += '<li class="chapter-item'+(c.id===firstId?' active':'')+'" data-chapter="'+c.id+'" title="'+escapeHtml(c.name)+'" onclick="showReaderChapter(\''+c.id+'\')"><span class="chapter-hash">#</span><span>'+escapeHtml(c.name)+'</span></li>';
+  });
+  CATEGORIES_INDEX.forEach(function(cat){
+    var inCat = CHAPTERS_INDEX.filter(function(c){ return c.categoryId === cat.id; });
+    if (!inCat.length) return;
+    html += '<li class="category-header" data-category="'+cat.id+'" onclick="toggleReaderCategory(\''+cat.id+'\')"><span class="category-chevron">\u25BE</span><span>'+escapeHtml(cat.name)+'</span></li>';
+    inCat.forEach(function(c){
+      html += '<li class="chapter-item nested'+(c.id===firstId?' active':'')+'" data-chapter="'+c.id+'" data-category="'+cat.id+'" title="'+escapeHtml(c.name)+'" onclick="showReaderChapter(\''+c.id+'\')"><span class="chapter-hash">#</span><span>'+escapeHtml(c.name)+'</span></li>';
+    });
   });
   ul.innerHTML = html;
 }
@@ -199,18 +236,18 @@ document.addEventListener('click', function(e){
   if (spoiler) { spoiler.classList.toggle('revealed'); return; }
   if (e.target.closest('#btn-reader-load-more')) { loadMoreReaderMessages(); return; }
 });
-Promise.all([
-  fetch('data/characters.json').then(function(r){ return r.json(); }),
-  fetch('data/chapters-index.json').then(function(r){ return r.json(); })
-]).then(function(results){
-  CHARACTERS = results[0];
-  CHAPTERS_INDEX = results[1];
-  buildSidebar();
-  if (CHAPTERS_INDEX.length) showReaderChapter(CHAPTERS_INDEX[0].id);
-  else setStatus('Este livro ainda não tem episódios.');
-}).catch(function(err){
-  setStatus('Não foi possível carregar o índice do livro (' + err.message + '). Abra este site via http(s) (ex: GitHub Pages), não direto do disco (file://).');
-});
+fetch('data/chapters-index.json')
+  .then(function(r){ return r.json(); })
+  .then(function(index){
+    CHAPTERS_INDEX = index.chapters || [];
+    CATEGORIES_INDEX = index.categories || [];
+    buildSidebar();
+    var firstId = getFirstChapterId();
+    if (firstId) showReaderChapter(firstId);
+    else setStatus('Este livro ainda não tem episódios.');
+  }).catch(function(err){
+    setStatus('Não foi possível carregar o índice do livro (' + err.message + '). Abra este site via http(s) (ex: GitHub Pages), não direto do disco (file://).');
+  });
 </script>
 </body>
 </html>
