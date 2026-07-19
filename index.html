@@ -14,7 +14,7 @@
     *{box-sizing:border-box}html,body{height:100%;margin:0}
     body{font-family:var(--font-ui);background:var(--bg-darkest);color:var(--text-normal);overflow:hidden}
     ::-webkit-scrollbar{width:10px}::-webkit-scrollbar-thumb{background:var(--bg-darkest);border-radius:8px;border:2px solid var(--bg-primary)}
-    #app{display:flex;flex-direction:column;height:100vh}
+    #app{display:flex;flex-direction:column;height:100vh;height:100dvh}
     #topbar{height:48px;min-height:48px;background:var(--bg-dark);border-bottom:1px solid var(--border-subtle);
       display:flex;align-items:center;padding:0 16px;font-weight:700;color:var(--text-header);font-size:15px;gap:10px}
     .topbar-logo-img{height:28px;width:auto;flex-shrink:0;border-radius:4px}
@@ -93,6 +93,7 @@
       .mobile-menu-toggle{display:flex}
       #left-sidebar{position:absolute;z-index:20;height:calc(100vh - 48px);left:-288px;transition:left .15s ease;width:288px}
       #left-sidebar.mobile-open{left:0;box-shadow:4px 0 16px rgba(0,0,0,.4)}
+      .reader-messages{padding-bottom:calc(48px + env(safe-area-inset-bottom, 0px) + 32px)}
     }
   </style>
 </head>
