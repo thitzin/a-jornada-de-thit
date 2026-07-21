@@ -128,11 +128,24 @@
 </div>
 <script>
 var CHAPTERS_INDEX = [];
+var CATEGORIES_INDEX = [];
 var CHARACTERS_MAP = {};
 var episodeCache = {};
 var activeChapterId = null;
-var READER_BATCH_SIZE = 300;
-var visibleCount = READER_BATCH_SIZE;
+function getFirstChapterId(){
+  var uncategorized = CHAPTERS_INDEX.filter(function(c){ return !c.categoryId; });
+  if (uncategorized.length) return uncategorized[0].id;
+  for (var i=0;i<CATEGORIES_INDEX.length;i++){
+    var inCat = CHAPTERS_INDEX.filter(function(c){ return c.categoryId === CATEGORIES_INDEX[i].id; });
+    if (inCat.length) return inCat[0].id;
+  }
+  return CHAPTERS_INDEX.length ? CHAPTERS_INDEX[0].id : null;
+}
+function toggleReaderCategory(catId){
+  document.querySelectorAll('.chapter-item[data-category="'+catId+'"]').forEach(function(el){ el.classList.toggle('hidden-by-collapse'); });
+  var header = document.querySelector('.category-header[data-category="'+catId+'"]');
+  if (header) header.classList.toggle('collapsed');
+}
 function escapeHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function initials(name){return name ? name.trim().charAt(0).toUpperCase() : '?';}
 function getCharacterById(id){return CHARACTERS_MAP[id] || null;}
@@ -154,12 +167,10 @@ function parseFormatting(raw){
   text = text.replace(/\n/g, '<br>');
   return text;
 }
-function renderMessagesBatch(messages, visibleN){
-  if (!messages || messages.length===0) return '<div class="empty-state">Este episódio ainda está vazio.</div>';
-  var total = messages.length;
-  var msgs = messages.slice(0, visibleN);
+function buildBlocksHtml(messages, start, end, chunkId){
+  var slice = messages.slice(start, end);
   var blocks = [];
-  msgs.forEach(function(item){
+  slice.forEach(function(item){
     if (item.type === 'image'){ blocks.push({kind:'image', item:item}); }
     else {
       var last = blocks[blocks.length-1];
@@ -171,27 +182,133 @@ function renderMessagesBatch(messages, visibleN){
   blocks.forEach(function(block){
     if (block.kind === 'image'){
       var img = block.item;
-      html += '<div class="illustration-block"><img src="'+escapeHtml(img.url)+'" alt="'+escapeHtml(img.caption||'Ilustração')+'" loading="lazy">' + (img.caption ? '<div class="illustration-caption">'+escapeHtml(img.caption)+'</div>' : '') + '</div>';
+      html += '<div class="illustration-block" data-chunk="'+chunkId+'"><img src="'+escapeHtml(img.url)+'" alt="'+escapeHtml(img.caption||'Ilustração')+'" loading="lazy">' + (img.caption ? '<div class="illustration-caption">'+escapeHtml(img.caption)+'</div>' : '') + '</div>';
     } else {
       var character = getCharacterById(block.characterId);
       var name = character ? character.name : 'Personagem removido';
       var color = character ? character.color : '#949ba4';
-      html += '<div class="message-group"><div class="message-group-avatar' + (character && character.avatar ? ' zoomable' : '') + '" data-character="'+block.characterId+'" style="'+avatarStyle(character)+'">' + ((character && character.avatar) ? '' : initials(name)) + '</div><div class="message-group-body"><div class="message-group-header"><span class="message-author-name' + (character && character.avatar ? ' zoomable' : '') + '" data-character="'+block.characterId+'" style="color:'+color+'">'+escapeHtml(name)+'</span>' + ((character && character.tag) ? '<span class="message-author-tag">'+escapeHtml(character.tag)+'</span>' : '') + '</div>';
+      html += '<div class="message-group" data-chunk="'+chunkId+'"><div class="message-group-avatar' + (character && character.avatar ? ' zoomable' : '') + '" data-character="'+block.characterId+'" style="'+avatarStyle(character)+'">' + ((character && character.avatar) ? '' : initials(name)) + '</div><div class="message-group-body"><div class="message-group-header"><span class="message-author-name' + (character && character.avatar ? ' zoomable' : '') + '" data-character="'+block.characterId+'" style="color:'+color+'">'+escapeHtml(name)+'</span>' + ((character && character.tag) ? '<span class="message-author-tag">'+escapeHtml(character.tag)+'</span>' : '') + '</div>';
       block.lines.forEach(function(line){ html += '<div class="message-line"><div class="message-content">'+parseFormatting(line.content)+'</div></div>'; });
       html += '</div></div>';
     }
   });
-  if (visibleN < total) {
-    html += '<div class="load-more-wrap"><button id="btn-reader-load-more" class="reader-load-btn">Carregar mais mensagens (' + (total - visibleN) + ' restantes) \u2B07</button></div>';
-  }
   return html;
 }
 function setStatus(msg){ document.getElementById('reader-messages').innerHTML = '<div class="loading-hint">'+msg+'</div>'; }
-function loadMoreReaderMessages(){
-  var messages = episodeCache[activeChapterId];
-  if (!messages) return;
-  visibleCount += READER_BATCH_SIZE;
-  document.getElementById('reader-messages').innerHTML = renderMessagesBatch(messages, visibleCount);
+var WINDOW_SIZE = 300;
+var WINDOW_STEP = 100;
+var renderedStart = 0, renderedEnd = 0;
+var chunkCounter = 0;
+var activeChunks = [];
+var currentMessages = [];
+function refreshSentinels(){
+  var container = document.getElementById('reader-messages');
+  var total = currentMessages.length;
+  var oldTop = document.getElementById('reader-sentinel-top');
+  var oldBottom = document.getElementById('reader-sentinel-bottom');
+  if (oldTop) oldTop.remove();
+  if (oldBottom) oldBottom.remove();
+  if (renderedStart > 0) {
+    container.insertAdjacentHTML('afterbegin', '<div class="load-more-wrap" id="reader-sentinel-top"><span class="loading-hint">Carregando mensagens anteriores…</span></div>');
+  }
+  if (renderedEnd < total) {
+    container.insertAdjacentHTML('beforeend', '<div class="load-more-wrap" id="reader-sentinel-bottom"><span class="loading-hint">Carregando mais mensagens…</span></div>');
+  }
+  attachSentinelObservers();
+}
+function attachSentinelObservers(){
+  if (!window.IntersectionObserver) return;
+  var topEl = document.getElementById('reader-sentinel-top');
+  var bottomEl = document.getElementById('reader-sentinel-bottom');
+  var root = document.getElementById('reader-messages');
+  if (topEl) {
+    var obsT = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if (e.isIntersecting) { obsT.disconnect(); growTop(); } });
+    }, {root: root, rootMargin: '400px'});
+    obsT.observe(topEl);
+  }
+  if (bottomEl) {
+    var obsB = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if (e.isIntersecting) { obsB.disconnect(); growBottom(); } });
+    }, {root: root, rootMargin: '400px'});
+    obsB.observe(bottomEl);
+  }
+}
+function renderInitialWindow(messages){
+  currentMessages = messages;
+  var container = document.getElementById('reader-messages');
+  var total = messages.length;
+  renderedStart = 0;
+  renderedEnd = Math.min(WINDOW_SIZE, total);
+  activeChunks = [];
+  if (total === 0) {
+    container.innerHTML = '<div class="empty-state">Este episódio ainda está vazio.</div>';
+    return;
+  }
+  var html = '';
+  var pos = renderedStart;
+  while (pos < renderedEnd) {
+    var chunkEnd = Math.min(pos + WINDOW_STEP, renderedEnd);
+    chunkCounter++;
+    var cid = chunkCounter;
+    activeChunks.push({id:cid, start:pos, end:chunkEnd});
+    html += buildBlocksHtml(messages, pos, chunkEnd, cid);
+    pos = chunkEnd;
+  }
+  container.innerHTML = html;
+  container.scrollTop = 0;
+  refreshSentinels();
+}
+function growBottom(){
+  var container = document.getElementById('reader-messages');
+  var total = currentMessages.length;
+  var newEnd = Math.min(total, renderedEnd + WINDOW_STEP);
+  if (newEnd === renderedEnd) return;
+  chunkCounter++;
+  var cid = chunkCounter;
+  var html = buildBlocksHtml(currentMessages, renderedEnd, newEnd, cid);
+  var oldBottomSentinel = document.getElementById('reader-sentinel-bottom');
+  if (oldBottomSentinel) oldBottomSentinel.remove();
+  container.insertAdjacentHTML('beforeend', html);
+  activeChunks.push({id:cid, start:renderedEnd, end:newEnd});
+  renderedEnd = newEnd;
+  while (renderedEnd - renderedStart > WINDOW_SIZE && activeChunks.length > 1) {
+    var oldest = activeChunks[0];
+    var els = container.querySelectorAll('[data-chunk="'+oldest.id+'"]');
+    if (els.length) {
+      var firstEl = els[0], lastEl = els[els.length-1];
+      var removedHeight = lastEl.getBoundingClientRect().bottom - firstEl.getBoundingClientRect().top;
+      for (var i=0;i<els.length;i++) els[i].remove();
+      container.scrollTop -= removedHeight;
+    }
+    activeChunks.shift();
+    renderedStart = oldest.end;
+  }
+  refreshSentinels();
+}
+function growTop(){
+  var container = document.getElementById('reader-messages');
+  var newStart = Math.max(0, renderedStart - WINDOW_STEP);
+  if (newStart === renderedStart) return;
+  chunkCounter++;
+  var cid = chunkCounter;
+  var html = buildBlocksHtml(currentMessages, newStart, renderedStart, cid);
+  var oldTopSentinel = document.getElementById('reader-sentinel-top');
+  if (oldTopSentinel) oldTopSentinel.remove();
+  var beforeHeight = container.scrollHeight;
+  container.insertAdjacentHTML('afterbegin', html);
+  var afterHeight = container.scrollHeight;
+  container.scrollTop += (afterHeight - beforeHeight);
+  activeChunks.unshift({id:cid, start:newStart, end:renderedStart});
+  renderedStart = newStart;
+  while (renderedEnd - renderedStart > WINDOW_SIZE && activeChunks.length > 1) {
+    var newest = activeChunks[activeChunks.length-1];
+    var els = container.querySelectorAll('[data-chunk="'+newest.id+'"]');
+    for (var i=0;i<els.length;i++) els[i].remove();
+    activeChunks.pop();
+    renderedEnd = newest.start;
+  }
+  refreshSentinels();
 }
 function showReaderChapter(id){
   var meta = null;
@@ -199,14 +316,12 @@ function showReaderChapter(id){
   if (!meta) return;
   if (activeChapterId && activeChapterId !== id) { delete episodeCache[activeChapterId]; }
   activeChapterId = id;
-  visibleCount = READER_BATCH_SIZE;
   document.querySelectorAll('.chapter-item').forEach(function(el){ el.classList.toggle('active', el.dataset.chapter===id); });
   document.getElementById('channel-title').textContent = meta.name;
   document.getElementById('channel-topic').textContent = meta.topic || '';
   closeMobileSidebar();
   if (episodeCache[id]) {
-    document.getElementById('reader-messages').innerHTML = renderMessagesBatch(episodeCache[id], visibleCount);
-    document.getElementById('reader-messages').scrollTop = 0;
+    renderInitialWindow(episodeCache[id]);
     return;
   }
   setStatus('Carregando episódio…');
@@ -216,27 +331,11 @@ function showReaderChapter(id){
       (data.characters || []).forEach(function(c){ CHARACTERS_MAP[c.id] = c; });
       episodeCache[id] = data.messages || [];
       if (activeChapterId !== id) return;
-      document.getElementById('reader-messages').innerHTML = renderMessagesBatch(episodeCache[id], visibleCount);
-      document.getElementById('reader-messages').scrollTop = 0;
+      renderInitialWindow(episodeCache[id]);
     })
     .catch(function(err){
       setStatus('Não foi possível carregar este episódio (' + err.message + '). Este arquivo precisa ser aberto via http(s) — ex: GitHub Pages — e não direto do disco (file://).');
     });
-}
-var CATEGORIES_INDEX = [];
-function getFirstChapterId(){
-  var uncategorized = CHAPTERS_INDEX.filter(function(c){ return !c.categoryId; });
-  if (uncategorized.length) return uncategorized[0].id;
-  for (var i=0;i<CATEGORIES_INDEX.length;i++){
-    var inCat = CHAPTERS_INDEX.filter(function(c){ return c.categoryId === CATEGORIES_INDEX[i].id; });
-    if (inCat.length) return inCat[0].id;
-  }
-  return CHAPTERS_INDEX.length ? CHAPTERS_INDEX[0].id : null;
-}
-function toggleReaderCategory(catId){
-  document.querySelectorAll('.chapter-item[data-category="'+catId+'"]').forEach(function(el){ el.classList.toggle('hidden-by-collapse'); });
-  var header = document.querySelector('.category-header[data-category="'+catId+'"]');
-  if (header) header.classList.toggle('collapsed');
 }
 function buildSidebar(){
   var ul = document.querySelector('.chapters-list');
@@ -259,7 +358,6 @@ function buildSidebar(){
 document.addEventListener('click', function(e){
   var spoiler = e.target.closest('.spoiler');
   if (spoiler) { spoiler.classList.toggle('revealed'); return; }
-  if (e.target.closest('#btn-reader-load-more')) { loadMoreReaderMessages(); return; }
   var avatarEl = e.target.closest('.message-group-avatar.zoomable, .message-author-name.zoomable');
   if (avatarEl) { openAvatarLightbox(avatarEl.dataset.character); return; }
 });
