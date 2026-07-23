@@ -3,10 +3,6 @@
     {
       "id": "cat_mrqd4rsu_1",
       "name": "CAP.1: Um Novo Começo"
-    },
-    {
-      "id": "cat_mrqdmzhq_4",
-      "name": "CAP.2: As Joias do Poder"
     }
   ],
   "chapters": [
@@ -45,12 +41,6 @@
       "name": "6. Pizzaria Escura",
       "topic": "",
       "categoryId": "cat_mrqd4rsu_1"
-    },
-    {
-      "id": "chap_mrweh20a_1",
-      "name": "7. De Volta",
-      "topic": "",
-      "categoryId": "cat_mrqdmzhq_4"
     }
   ]
 }
