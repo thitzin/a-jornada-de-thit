@@ -237,7 +237,7 @@ function ensureIllustrationObserver(){
       var full = img.dataset.fullSrc;
       if (!full) return;
       if (entry.isIntersecting) {
-        if (img.getAttribute('src') !== full) { img.src = full; img.classList.add('is-loaded'); }
+        if (img.getAttribute('src') !== full) { img.addEventListener('load', function(){ img.classList.add('is-loaded'); }, { once: true }); img.src = full; }
         return;
       }
       var rootRect = entry.rootBounds;
@@ -254,7 +254,7 @@ function ensureIllustrationObserver(){
 function wireIllustrationLazyLoad(container){
   var observer = ensureIllustrationObserver();
   if (!observer) {
-    container.querySelectorAll('img[data-full-src]').forEach(function(img){ img.src = img.dataset.fullSrc; img.classList.add('is-loaded'); });
+    container.querySelectorAll('img[data-full-src]').forEach(function(img){ img.addEventListener('load', function(){ img.classList.add('is-loaded'); }, { once: true }); img.src = img.dataset.fullSrc; });
     return;
   }
   observer.disconnect();
