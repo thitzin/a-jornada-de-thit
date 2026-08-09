@@ -63,25 +63,40 @@
     .spoiler{background:var(--bg-elevated);color:transparent;border-radius:3px;cursor:pointer;padding:0 2px;user-select:none}
     .spoiler.revealed{background:var(--bg-hover);color:var(--text-normal);user-select:text}
     .illustration-block{display:flex;flex-direction:column;align-items:center;margin:24px 0;padding:12px 0}
-    .illustration-block img{max-width:min(560px,100%);max-height:70vh;width:auto;border-radius:8px;
+    .illustration-block img,.lazy-illustration{max-width:min(560px,100%);max-height:70vh;width:auto;height:auto;border-radius:8px;
       box-shadow:0 4px 18px rgba(0,0,0,.4);display:block}
     .illustration-caption{margin-top:10px;font-size:13px;font-style:italic;color:var(--text-muted);text-align:center;max-width:420px}
     .illustration-block.illustration-block-attributed{display:flex;flex-direction:row;align-items:flex-start;
       gap:16px;max-width:620px;margin:17px 0;padding:2px 8px}
     .illustration-block.illustration-block-attributed:first-child{margin-top:4px}
     .illustration-block-attributed .message-group-body{flex:1;min-width:0}
-    .illustration-attributed-media img{max-width:min(360px,100%);max-height:50vh;width:auto;border-radius:8px;
+    .illustration-attributed-media img,.illustration-attributed-media .lazy-illustration{max-width:min(360px,100%);max-height:50vh;width:auto;height:auto;border-radius:8px;
       box-shadow:0 4px 18px rgba(0,0,0,.4);display:block;margin-top:2px}
     .illustration-block-attributed .illustration-caption{text-align:left;max-width:360px;margin-left:0}
-    .lazy-illustration:not(.is-loaded){min-height:220px;width:min(420px,100%);
-      background:linear-gradient(135deg,var(--bg-elevated),var(--bg-dark));box-shadow:none}
-    .illustration-attributed-media .lazy-illustration:not(.is-loaded){min-height:140px;width:min(260px,100%)}
+    /* Placeholder da ilustração ainda não carregada. Quando a imagem já tem
+       width/height conhecidos (atributos no <img>), o navegador reserva o
+       espaço exato via aspect-ratio automático — sem pulo ao carregar. O
+       min-height/width fixos abaixo só valem como fallback (imagens sem
+       essa informação salva). */
+    .lazy-illustration:not(.is-loaded){background:linear-gradient(135deg,var(--bg-elevated),var(--bg-dark));box-shadow:none}
+    .lazy-illustration:not(.is-loaded):not([width]){min-height:220px;width:min(420px,100%)}
+    .illustration-attributed-media .lazy-illustration:not(.is-loaded):not([width]){min-height:140px;width:min(260px,100%)}
     .empty-state{margin:auto;text-align:center;color:var(--text-muted)}
     .loading-hint{margin:auto;color:var(--text-faint);font-size:13px}
     .load-more-wrap{display:flex;justify-content:center;padding:16px 0 28px}
     .reader-load-btn{padding:8px 16px;font-size:12px;font-weight:600;background:var(--bg-elevated);
       color:var(--text-normal);border:none;border-radius:4px;cursor:pointer}
     .reader-load-btn:hover{background:var(--bg-hover)}
+    /* Piscadinha de referência ao clicar em "Carregar mais mensagens": marca
+       a última mensagem que já estava visível antes do carregamento, pra
+       facilitar achar onde a leitura parou mesmo que a tela role um pouco. */
+    .reader-load-marker{border-radius:4px;animation:reader-load-marker-fade 1.6s ease}
+    @keyframes reader-load-marker-fade{
+      0%{background:rgba(88,101,242,0)}
+      20%{background:rgba(88,101,242,.15)}
+      70%{background:rgba(88,101,242,.15)}
+      100%{background:rgba(88,101,242,0)}
+    }
 
     /* --- popup de avatar em zoom (clicar no avatar/nome na leitura) --- */
     .avatar-lightbox{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;align-items:center;
@@ -177,10 +192,17 @@ function parseFormatting(raw){
   text = text.replace(/\n/g, '<br>');
   return text;
 }
+function imgDimAttrs(img){ return (img.width && img.height) ? (' width="'+img.width+'" height="'+img.height+'"') : ''; }
 function renderMessagesBatch(messages, visibleN){
   if (!messages || messages.length===0) return '<div class="empty-state">Este episódio ainda está vazio.</div>';
   var total = messages.length;
-  var msgs = messages.slice(0, visibleN);
+  var html = renderMessageBlocksHtml(messages.slice(0, visibleN));
+  if (visibleN < total) {
+    html += '<div class="load-more-wrap"><button type="button" id="btn-reader-load-more" class="reader-load-btn">Carregar mais mensagens \u2B07</button></div>';
+  }
+  return html;
+}
+function renderMessageBlocksHtml(msgs){
   var blocks = [];
   msgs.forEach(function(item){
     if (item.type === 'image'){ blocks.push({kind:'image', item:item}); }
@@ -196,9 +218,9 @@ function renderMessagesBatch(messages, visibleN){
       var img = block.item;
       var speaker = img.speakerId ? getCharacterById(img.speakerId) : null;
       if (speaker) {
-        html += '<div class="illustration-block illustration-block-attributed"><div class="message-group-avatar' + (speaker.avatar ? ' zoomable' : '') + '" data-character="'+img.speakerId+'" style="'+avatarStyle(speaker)+'">' + (speaker.avatar ? '' : initials(speaker.name)) + '</div><div class="message-group-body"><div class="message-group-header"><span class="message-author-name' + (speaker.avatar ? ' zoomable' : '') + '" data-character="'+img.speakerId+'" style="color:'+speaker.color+'">'+escapeHtml(speaker.name)+'</span>' + (speaker.tag ? '<span class="message-author-tag">'+escapeHtml(speaker.tag)+'</span>' : '') + '</div><div class="illustration-attributed-media"><img data-full-src="'+escapeHtml(img.url)+'" alt="'+escapeHtml(img.caption||'Ilustração')+'" class="lazy-illustration">' + (img.caption ? '<div class="illustration-caption">'+escapeHtml(img.caption)+'</div>' : '') + '</div></div></div>';
+        html += '<div class="illustration-block illustration-block-attributed"><div class="message-group-avatar' + (speaker.avatar ? ' zoomable' : '') + '" data-character="'+img.speakerId+'" style="'+avatarStyle(speaker)+'">' + (speaker.avatar ? '' : initials(speaker.name)) + '</div><div class="message-group-body"><div class="message-group-header"><span class="message-author-name' + (speaker.avatar ? ' zoomable' : '') + '" data-character="'+img.speakerId+'" style="color:'+speaker.color+'">'+escapeHtml(speaker.name)+'</span>' + (speaker.tag ? '<span class="message-author-tag">'+escapeHtml(speaker.tag)+'</span>' : '') + '</div><div class="illustration-attributed-media"><img data-full-src="'+escapeHtml(img.url)+'"'+imgDimAttrs(img)+' alt="'+escapeHtml(img.caption||'Ilustração')+'" class="lazy-illustration">' + (img.caption ? '<div class="illustration-caption">'+escapeHtml(img.caption)+'</div>' : '') + '</div></div></div>';
       } else {
-        html += '<div class="illustration-block"><img data-full-src="'+escapeHtml(img.url)+'" alt="'+escapeHtml(img.caption||'Ilustração')+'" class="lazy-illustration">' + (img.caption ? '<div class="illustration-caption">'+escapeHtml(img.caption)+'</div>' : '') + '</div>';
+        html += '<div class="illustration-block"><img data-full-src="'+escapeHtml(img.url)+'"'+imgDimAttrs(img)+' alt="'+escapeHtml(img.caption||'Ilustração')+'" class="lazy-illustration">' + (img.caption ? '<div class="illustration-caption">'+escapeHtml(img.caption)+'</div>' : '') + '</div>';
       }
     } else {
       var character = getCharacterById(block.characterId);
@@ -209,9 +231,6 @@ function renderMessagesBatch(messages, visibleN){
       html += '</div></div>';
     }
   });
-  if (visibleN < total) {
-    html += '<div class="load-more-wrap"><button type="button" id="btn-reader-load-more" class="reader-load-btn">Carregar mais mensagens \u2B07</button></div>';
-  }
   return html;
 }
 function setStatus(msg){ document.getElementById('reader-messages').innerHTML = '<div class="loading-hint">'+msg+'</div>'; }
@@ -220,9 +239,27 @@ var visibleCount = READER_BATCH_SIZE;
 function loadMoreReaderMessages(){
   var messages = episodeCache[activeChapterId];
   if (!messages) return;
+  var container = document.getElementById('reader-messages');
+  var oldVisibleCount = visibleCount;
   visibleCount += READER_BATCH_SIZE;
-  document.getElementById('reader-messages').innerHTML = renderMessagesBatch(messages, visibleCount);
-  wireIllustrationLazyLoad(document.getElementById('reader-messages'));
+  var oldLoadMoreWrap = container.querySelector('.load-more-wrap');
+  var marker = oldLoadMoreWrap ? oldLoadMoreWrap.previousElementSibling : container.lastElementChild;
+  if (oldLoadMoreWrap) oldLoadMoreWrap.remove();
+  var newSlice = messages.slice(oldVisibleCount, visibleCount);
+  var temp = document.createElement('div');
+  temp.innerHTML = renderMessageBlocksHtml(newSlice);
+  while (temp.firstChild) { container.appendChild(temp.firstChild); }
+  if (visibleCount < messages.length) {
+    var wrap = document.createElement('div');
+    wrap.className = 'load-more-wrap';
+    wrap.innerHTML = '<button type="button" id="btn-reader-load-more" class="reader-load-btn">Carregar mais mensagens \u2B07</button>';
+    container.appendChild(wrap);
+  }
+  wireIllustrationLazyLoad(container);
+  if (marker) {
+    marker.classList.add('reader-load-marker');
+    setTimeout(function(){ marker.classList.remove('reader-load-marker'); }, 1600);
+  }
 }
 var illustrationObserver = null;
 var ILLUSTRATION_LOAD_MARGIN = '1200px';
