@@ -326,7 +326,7 @@ function showReaderChapter(id){
       document.getElementById('reader-messages').scrollTop = 0;
     })
     .catch(function(err){
-      setStatus('Não foi possível carregar este episódio (' + err.message + '). Este arquivo precisa ser aberto via http(s) — ex: GitHub Pages — e não direto do disco (file://).');
+      setStatus('Não foi possível carregar este episódio.');
     });
 }
 function buildSidebar(){
