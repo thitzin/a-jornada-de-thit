@@ -48,8 +48,10 @@
     .message-group-body{flex:1;min-width:0}
     .message-group-header{display:flex;align-items:baseline;gap:8px;margin-bottom:2px}
     .message-author-name{font-size:16px;font-weight:600}
-    .message-author-tag{font-size:10px;font-weight:600;padding:1px 6px;border-radius:4px;background:var(--bg-elevated);
-      color:var(--text-muted);text-transform:uppercase}
+    .message-author-tag{font-size:10px;font-weight:700;padding:1px 4px;border-radius:3px;background:var(--brand);
+      color:#fff;text-transform:uppercase;line-height:1.25}
+    .episodes-list-label{padding:14px 6px 4px;font-size:12px;font-weight:700;letter-spacing:.02em;
+      text-transform:uppercase;color:var(--text-muted)}
     .message-content{font-size:15px;line-height:1.375rem;color:var(--text-normal);word-wrap:break-word;white-space:pre-wrap}
     .message-content strong{font-weight:700;color:var(--text-header)}
     .message-content em{font-style:italic}.message-content u{text-decoration:underline}.message-content s{text-decoration:line-through}
@@ -132,7 +134,6 @@
   <div id="main-layout">
     <div id="mobile-backdrop" class="mobile-backdrop"></div>
     <aside id="left-sidebar">
-      <div class="sidebar-section-header">Episódios</div>
       <ul class="chapters-list"><li class="loading-hint" style="padding:8px">Carregando…</li></ul>
     </aside>
     <main id="chat-area">
@@ -337,9 +338,11 @@ function buildSidebar(){
   uncategorized.forEach(function(c){
     html += '<li class="chapter-item'+(c.id===firstId?' active':'')+'" data-chapter="'+c.id+'" title="'+escapeHtml(c.name)+'" onclick="showReaderChapter(\''+c.id+'\')"><span class="chapter-hash">#</span><span>'+escapeHtml(c.name)+'</span></li>';
   });
+  var episodesLabelShown = false;
   CATEGORIES_INDEX.forEach(function(cat){
     var inCat = CHAPTERS_INDEX.filter(function(c){ return c.categoryId === cat.id; });
     if (!inCat.length) return;
+    if (!episodesLabelShown) { html += '<li class="episodes-list-label">Epis\u00f3dios</li>'; episodesLabelShown = true; }
     html += '<li class="category-header" data-category="'+cat.id+'" onclick="toggleReaderCategory(\''+cat.id+'\')"><span class="category-chevron">\u25BE</span><span>'+escapeHtml(cat.name)+'</span></li>';
     inCat.forEach(function(c){
       html += '<li class="chapter-item nested'+(c.id===firstId?' active':'')+'" data-chapter="'+c.id+'" data-category="'+cat.id+'" title="'+escapeHtml(c.name)+'" onclick="showReaderChapter(\''+c.id+'\')"><span class="chapter-hash">#</span><span>'+escapeHtml(c.name)+'</span></li>';
