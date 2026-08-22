@@ -282,7 +282,7 @@ function ensureIllustrationObserver(){
       if (!rootRect) return;
       var rect = entry.boundingClientRect;
       var distance = rect.bottom < rootRect.top ? (rootRect.top - rect.bottom) : (rect.top - rootRect.bottom);
-      if (distance > ILLUSTRATION_UNLOAD_DISTANCE && img.hasAttribute('src')) {
+      if (distance > ILLUSTRATION_UNLOAD_DISTANCE && img.hasAttribute('src') && img.hasAttribute('width')) {
         img.removeAttribute('src'); img.classList.remove('is-loaded');
       }
     });
@@ -292,11 +292,10 @@ function ensureIllustrationObserver(){
 function wireIllustrationLazyLoad(container){
   var observer = ensureIllustrationObserver();
   if (!observer) {
-    container.querySelectorAll('img[data-full-src]').forEach(function(img){ img.addEventListener('load', function(){ img.classList.add('is-loaded'); }, { once: true }); img.src = img.dataset.fullSrc; });
+    container.querySelectorAll('img[data-full-src]:not([data-observed])').forEach(function(img){ img.dataset.observed = '1'; img.addEventListener('load', function(){ img.classList.add('is-loaded'); }, { once: true }); img.src = img.dataset.fullSrc; });
     return;
   }
-  observer.disconnect();
-  container.querySelectorAll('img[data-full-src]').forEach(function(img){ observer.observe(img); });
+  container.querySelectorAll('img[data-full-src]:not([data-observed])').forEach(function(img){ img.dataset.observed = '1'; observer.observe(img); });
 }
 function showReaderChapter(id){
   var meta = null;
