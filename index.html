@@ -276,6 +276,7 @@ function loadMoreReaderMessages(){
     container.appendChild(wrap);
   }
   wireIllustrationLazyLoad(container);
+  applyTwemoji(container);
   if (marker) {
     marker.classList.add('reader-load-marker');
     setTimeout(function(){ marker.classList.remove('reader-load-marker'); }, 1600);
