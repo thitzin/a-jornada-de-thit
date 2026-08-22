@@ -218,7 +218,7 @@ function renderMessagesBatch(messages, visibleN){
   var total = messages.length;
   var html = renderMessageBlocksHtml(messages.slice(0, visibleN));
   if (visibleN < total) {
-    html += '<div class="load-more-wrap"><button type="button" id="btn-reader-load-more" class="reader-load-btn">Carregar mais mensagens ⇩\u2B07</button></div>';
+    html += '<div class="load-more-wrap"><button type="button" id="btn-reader-load-more" class="reader-load-btn">Carregar mais mensagens ↴</button></div>';
   }
   return html;
 }
@@ -272,7 +272,7 @@ function loadMoreReaderMessages(){
   if (visibleCount < messages.length) {
     var wrap = document.createElement('div');
     wrap.className = 'load-more-wrap';
-    wrap.innerHTML = '<button type="button" id="btn-reader-load-more" class="reader-load-btn">Carregar mais mensagens ⇩\u2B07</button>';
+    wrap.innerHTML = '<button type="button" id="btn-reader-load-more" class="reader-load-btn">Carregar mais mensagens ↴</button>';
     container.appendChild(wrap);
   }
   wireIllustrationLazyLoad(container);
