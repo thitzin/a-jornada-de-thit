@@ -62,6 +62,9 @@
       padding:10px 12px;margin:4px 0;overflow-x:auto}
     .message-content pre.code-block code{font-family:var(--font-code);font-size:.85em;white-space:pre}
     .message-content .subtext{display:inline;font-size:12px;color:var(--text-faint)}
+    .message-content img.emoji{width:1.375em;height:1.375em;vertical-align:-0.28em;margin:0 .05em 0 .1em;object-fit:contain}
+    .message-content.emoji-only{font-size:3.5rem;line-height:1.25}
+    .message-content.emoji-only img.emoji{width:1em;height:1em;margin:0 .02em;vertical-align:-0.1em}
     .spoiler{background:var(--bg-elevated);color:transparent;border-radius:3px;cursor:pointer;padding:0 2px;user-select:none}
     .spoiler.revealed{background:var(--bg-hover);color:var(--text-normal);user-select:text}
     .illustration-block{display:flex;flex-direction:column;align-items:center;margin:24px 0;padding:12px 0}
@@ -152,6 +155,7 @@
   <button id="avatar-lightbox-close" class="avatar-lightbox-close" aria-label="Fechar">✕</button>
   <img id="avatar-lightbox-img" src="" alt="">
 </div>
+<script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js" crossorigin="anonymous"></script>
 <script>
 var CHAPTERS_INDEX = [];
 var CATEGORIES_INDEX = [];
@@ -193,13 +197,28 @@ function parseFormatting(raw){
   text = text.replace(/\n/g, '<br>');
   return text;
 }
+function isEmojiOnlyText(raw){
+  if (!raw) return false;
+  var stripped = String(raw).replace(/\s+/g, '');
+  if (!stripped) return false;
+  try {
+    var re = new RegExp('^(?:\\p{Extended_Pictographic}\\uFE0F?(?:\\u200D\\p{Extended_Pictographic}\\uFE0F?)*|\\p{Regional_Indicator}{2}|[0-9#*]\\uFE0F?\\u20E3)+$', 'u');
+    return re.test(stripped);
+  } catch (e) {
+    return false;
+  }
+}
+function applyTwemoji(container){
+  if (typeof twemoji === 'undefined') return;
+  try { twemoji.parse(container, { folder: 'svg', ext: '.svg' }); } catch (e) {}
+}
 function imgDimAttrs(img){ return (img.width && img.height) ? (' width="'+img.width+'" height="'+img.height+'"') : ''; }
 function renderMessagesBatch(messages, visibleN){
   if (!messages || messages.length===0) return '<div class="empty-state">Este episódio ainda está vazio.</div>';
   var total = messages.length;
   var html = renderMessageBlocksHtml(messages.slice(0, visibleN));
   if (visibleN < total) {
-    html += '<div class="load-more-wrap"><button type="button" id="btn-reader-load-more" class="reader-load-btn">Carregar mais mensagens \u2B07</button></div>';
+    html += '<div class="load-more-wrap"><button type="button" id="btn-reader-load-more" class="reader-load-btn">Carregar mais mensagens ⇩\u2B07</button></div>';
   }
   return html;
 }
@@ -228,7 +247,7 @@ function renderMessageBlocksHtml(msgs){
       var name = character ? character.name : 'Personagem removido';
       var color = character ? character.color : '#949ba4';
       html += '<div class="message-group"><div class="message-group-avatar' + (character && character.avatar ? ' zoomable' : '') + '" data-character="'+block.characterId+'" style="'+avatarStyle(character)+'">' + ((character && character.avatar) ? '' : initials(name)) + '</div><div class="message-group-body"><div class="message-group-header"><span class="message-author-name' + (character && character.avatar ? ' zoomable' : '') + '" data-character="'+block.characterId+'" style="color:'+color+'">'+escapeHtml(name)+'</span>' + ((character && character.tag) ? '<span class="message-author-tag">'+escapeHtml(character.tag)+'</span>' : '') + '</div>';
-      block.lines.forEach(function(line){ html += '<div class="message-line"><div class="message-content">'+parseFormatting(line.content)+'</div></div>'; });
+      block.lines.forEach(function(line){ html += '<div class="message-line"><div class="message-content'+(isEmojiOnlyText(line.content)?' emoji-only':'')+'">'+parseFormatting(line.content)+'</div></div>'; });
       html += '</div></div>';
     }
   });
@@ -253,7 +272,7 @@ function loadMoreReaderMessages(){
   if (visibleCount < messages.length) {
     var wrap = document.createElement('div');
     wrap.className = 'load-more-wrap';
-    wrap.innerHTML = '<button type="button" id="btn-reader-load-more" class="reader-load-btn">Carregar mais mensagens \u2B07</button>';
+    wrap.innerHTML = '<button type="button" id="btn-reader-load-more" class="reader-load-btn">Carregar mais mensagens ⇩\u2B07</button>';
     container.appendChild(wrap);
   }
   wireIllustrationLazyLoad(container);
@@ -311,6 +330,7 @@ function showReaderChapter(id){
   if (episodeCache[id]) {
     document.getElementById('reader-messages').innerHTML = renderMessagesBatch(episodeCache[id], visibleCount);
     wireIllustrationLazyLoad(document.getElementById('reader-messages'));
+    applyTwemoji(document.getElementById('reader-messages'));
     document.getElementById('reader-messages').scrollTop = 0;
     return;
   }
@@ -323,6 +343,7 @@ function showReaderChapter(id){
       if (activeChapterId !== id) return;
       document.getElementById('reader-messages').innerHTML = renderMessagesBatch(episodeCache[id], visibleCount);
       wireIllustrationLazyLoad(document.getElementById('reader-messages'));
+      applyTwemoji(document.getElementById('reader-messages'));
       document.getElementById('reader-messages').scrollTop = 0;
     })
     .catch(function(err){
