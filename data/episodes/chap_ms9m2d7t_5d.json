@@ -1,1 +1,33 @@
-{"chapterMeta":{"name":"Sobre o Thit","topic":""},"characters":[{"id":"char_msz986z6_1","name":"thitzin","tag":"CRIADOR","color":"#0ba5fa","avatar":"data/images/avatar-char_msz986z6_1.png","archived":true}],"messages":[{"id":"msg_msz98ehl_2","type":"message","characterId":"char_msz986z6_1","content":"Thit nasceu em 27 de abril de 2000 na Cidade Hyper MG, Dimensão Central. Em 2004, fez o \"prezinho dos animais\", onde aprendeu português. Em 2006, ele entrou em uma escola normal, meio longe de onde ele morava na cidade. Em 2011, seu pai começou a ficar mais ausente, mas ainda aparecia em ocasiões especiais, como aniversários e eventos escolares. Em 2017, ele termina a escola e adquire o poder do \"jooj\", o poder mais fácil de obter que ele conseguiu encontrar. Em 2021, ele se cansou do poder e realizou o procedimento para removê-lo. Em fevereiro de 2022, ele decidiu viver uma vida normal e falou para a mãe dele: \"mãe, vou me mudar, me dá um dinheirinho pra ajudar e eu me viro, relaxa que eu tenho tudo planejado\". Ele não tinha nada planejado, e nem ao menos emprego, mas a mãe dele confiou nele e aceitou. Com isso, ele foi para um lado da cidade mais próximo da antiga escola dele."},{"id":"img_msc6hxld_2","type":"image","url":"data/images/img_msc6hxld_2.jpg","caption":"","speakerId":null,"width":1600,"height":900}]}
+{
+  "chapterMeta": {
+    "name": "Sobre o Thit",
+    "topic": ""
+  },
+  "characters": [
+    {
+      "id": "char_msz986z6_1",
+      "name": "thitzin",
+      "tag": "CRIADOR",
+      "color": "#0ba5fa",
+      "avatar": "data/images/avatar-char_msz986z6_1.png",
+      "archived": true
+    }
+  ],
+  "messages": [
+    {
+      "id": "img_msc6hxld_2",
+      "type": "image",
+      "url": "data/images/img_msc6hxld_2.jpg",
+      "caption": "",
+      "speakerId": null,
+      "width": 1600,
+      "height": 900
+    },
+    {
+      "id": "msg_msz98ehl_2",
+      "type": "message",
+      "characterId": "char_msz986z6_1",
+      "content": "Thit nasceu em 27 de abril de 2000 na Cidade Hyper MG, Dimensão Central. Em 2004, fez o \"prezinho dos animais\", onde aprendeu português. Em 2006, ele entrou em uma escola normal, meio longe de onde ele morava na cidade. Em 2011, seu pai começou a ficar mais ausente, mas ainda aparecia em ocasiões especiais, como aniversários e eventos escolares. Em 2017, ele termina a escola e adquire o poder do \"jooj\", o poder mais fácil de obter que ele conseguiu encontrar. Em 2021, ele se cansou do poder e realizou o procedimento para removê-lo. Em fevereiro de 2022, ele decidiu viver uma vida normal e falou para a mãe dele: \"mãe, vou me mudar, me dá um dinheirinho pra ajudar e eu me viro, relaxa que eu tenho tudo planejado\". Ele não tinha nada planejado, e nem ao menos emprego, mas a mãe dele confiou nele e aceitou. Com isso, ele foi para um lado da cidade mais próximo da antiga escola dele."
+    }
+  ]
+}
