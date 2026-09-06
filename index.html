@@ -121,7 +121,13 @@
     .mobile-backdrop.open{display:block}
     @media (max-width:860px){
       .mobile-menu-toggle{display:flex}
-      #left-sidebar{position:absolute;z-index:20;height:calc(100vh - 48px);left:-288px;transition:left .15s ease;width:288px}
+      #left-sidebar{position:absolute;z-index:20;height:calc(100vh - 48px);height:calc(100dvh - 48px);
+        left:-288px;transition:left .15s ease;width:288px;
+        /* espaço extra no fim da lista: em celulares com barra de
+           gestos/botões do sistema, sem isso o último episódio da lista
+           fica parcialmente escondido atrás dela e não dá pra rolar o
+           suficiente pra revelar ele por completo. */
+        padding-bottom:calc(16px + env(safe-area-inset-bottom, 0px) + 32px)}
       #left-sidebar.mobile-open{left:0;box-shadow:4px 0 16px rgba(0,0,0,.4)}
       .reader-messages{padding-bottom:calc(48px + env(safe-area-inset-bottom, 0px) + 32px)}
     }
