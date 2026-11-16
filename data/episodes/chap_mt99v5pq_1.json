@@ -11,6 +11,14 @@
       "color": "#0ba5fa",
       "avatar": "data/images/avatar-char_msz986z6_1.png",
       "archived": false
+    },
+    {
+      "id": "char_mrnx8fbg_4",
+      "name": "Aceronla",
+      "tag": "",
+      "color": "#ffffff",
+      "avatar": "data/images/avatar-char_mrnx8fbg_4.png",
+      "archived": false
     }
   ],
   "messages": [
@@ -18,7 +26,7 @@
       "id": "msg_mw7w306q_1",
       "type": "message",
       "characterId": "char_msz986z6_1",
-      "content": "ℹ️ \"A Jornada de Thit\" é um RP de Discord, parecido com uma série animada/livro, focado em comédia absurda, ação. Ele se passa após o protagonista Thit, um cachorro de chapéu, sair da casa dos pais e ir morar sozinho, mas sem ter um emprego. Assim, ele acaba embarcando em uma jornada para coletar todas as joias do poder, que podem dar ao usuário um poder absurdo. Nisso, ele acaba fazendo novos amigos, reencontrando figuras familiares e até mesmo personagens de outras mídias.\n\n⚠️ Essa história aborda temas como:\n**- Violência cartoon:** sangue é descrito e ilustrado;\n**- Linguagem imprópria:** os palavrões são censurados, mas outras palavras pesadas são mencionadas explicitamente;\n**- Terror:** apesar de ser de forma cômica, são feitas referências a franquias como FNAF e Poppy Playtime."
+      "content": "ℹ️ \"A Jornada de Thit\" é um RP de Discord, parecido com uma série animada/livro, focado em comédia absurda e ação. Ele se passa após o protagonista Thit, um cachorro de chapéu, sair da casa dos pais e ir morar sozinho, mas sem ter um emprego. Assim, ele acaba embarcando em uma jornada para coletar todas as joias do poder, que podem dar ao usuário um poder absurdo. Nisso, ele acaba fazendo novos amigos, reencontrando figuras familiares e até mesmo personagens de outras mídias.\n\n⚠️ Essa história aborda temas como:\n**- Violência cartoon:** sangue é descrito e ilustrado;\n**- Linguagem imprópria:** os palavrões são censurados, mas outras palavras pesadas são mencionadas explicitamente;\n**- Terror:** apesar de ser de forma cômica, são feitas referências a franquias como FNAF e Poppy Playtime."
     },
     {
       "id": "img_mw7wmfqa_2",
@@ -28,6 +36,12 @@
       "speakerId": null,
       "width": 1670,
       "height": 1080
+    },
+    {
+      "id": "msg_mwig1dc9_1",
+      "type": "message",
+      "characterId": "char_mrnx8fbg_4",
+      "content": "a -#oi-#"
     }
   ]
 }
